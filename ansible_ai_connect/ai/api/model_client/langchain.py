@@ -96,7 +96,10 @@ class LangChainClient(ModelMeshClient):
         prompt = model_input.get("instances", [{}])[0].get("prompt", "")
         context = model_input.get("instances", [{}])[0].get("context", "")
 
-        full_prompt = f"{context}{prompt}\n"
+        # NOTE: The change below is just for rulebook PoC, need to update or remove it later
+        full_prompt = f"Question:\n{prompt}\nAnswer:\n"
+        # full_prompt = f"{context}{prompt}\n"
+        
         llm = self.get_chat_model(model_id)
 
         chat_template = ChatPromptTemplate.from_messages(
