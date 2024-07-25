@@ -100,13 +100,9 @@ class InferenceStage(PipelineElement):
         event_name = None
         start_time = time.time()
         try:
-            print("[DEBUG] hello world (right before inference)")
-            print(data)
             predictions = model_mesh_client.infer(
                 request, data, model_id=model_id, suggestion_id=suggestion_id
             )
-            print(predictions)
-            print("[DEBUG] hello world (right after inference)")
             model_id = predictions.get("model_id", model_id)
         except ModelTimeoutError as e:
             exception = e

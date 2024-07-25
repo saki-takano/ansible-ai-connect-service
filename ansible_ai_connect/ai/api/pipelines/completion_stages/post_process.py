@@ -42,85 +42,85 @@ postprocess_hist = Histogram(
 )
 
 
-# def get_ansible_lint_caller():
-#     ansible_lint_caller = apps.get_app_config("ai").get_ansible_lint_caller()
-#     if not ansible_lint_caller:
-#         logger.warn("skipped ansible lint post processing because ansible lint was not initialized")
-#     return ansible_lint_caller
+def get_ansible_lint_caller():
+    ansible_lint_caller = apps.get_app_config("ai").get_ansible_lint_caller()
+    if not ansible_lint_caller:
+        logger.warn("skipped ansible lint post processing because ansible lint was not initialized")
+    return ansible_lint_caller
 
 
-# def write_to_segment(
-#     user,
-#     suggestion_id,
-#     recommendation_yaml,
-#     truncated_yaml,
-#     postprocessed_yaml,
-#     postprocess_detail,
-#     exception,
-#     start_time,
-#     event_type,
-#     model_id,
-# ):
-#     duration = round((time.time() - start_time) * 1000, 2)
-#     problem = (
-#         exception.problem
-#         if isinstance(exception, MarkedYAMLError)
-#         else str(exception) if str(exception) else exception.__class__.__name__
-#     )
-#     if event_type == "ARI":
-#         event_name = "postprocess"
-#         event = {
-#             "exception": exception is not None,
-#             "problem": problem,
-#             "duration": duration,
-#             "recommendation": recommendation_yaml,
-#             "truncated": truncated_yaml,
-#             "postprocessed": postprocessed_yaml,
-#             "details": postprocess_detail,
-#             "suggestionId": str(suggestion_id) if suggestion_id else None,
-#         }
-#     if event_type == "ansible-lint":
-#         event_name = "postprocessLint"
-#         event = {
-#             "exception": exception is not None,
-#             "problem": problem,
-#             "duration": duration,
-#             "recommendation": recommendation_yaml,
-#             "postprocessed": postprocessed_yaml,
-#             "suggestionId": str(suggestion_id) if suggestion_id else None,
-#         }
+def write_to_segment(
+    user,
+    suggestion_id,
+    recommendation_yaml,
+    truncated_yaml,
+    postprocessed_yaml,
+    postprocess_detail,
+    exception,
+    start_time,
+    event_type,
+    model_id,
+):
+    duration = round((time.time() - start_time) * 1000, 2)
+    problem = (
+        exception.problem
+        if isinstance(exception, MarkedYAMLError)
+        else str(exception) if str(exception) else exception.__class__.__name__
+    )
+    if event_type == "ARI":
+        event_name = "postprocess"
+        event = {
+            "exception": exception is not None,
+            "problem": problem,
+            "duration": duration,
+            "recommendation": recommendation_yaml,
+            "truncated": truncated_yaml,
+            "postprocessed": postprocessed_yaml,
+            "details": postprocess_detail,
+            "suggestionId": str(suggestion_id) if suggestion_id else None,
+        }
+    if event_type == "ansible-lint":
+        event_name = "postprocessLint"
+        event = {
+            "exception": exception is not None,
+            "problem": problem,
+            "duration": duration,
+            "recommendation": recommendation_yaml,
+            "postprocessed": postprocessed_yaml,
+            "suggestionId": str(suggestion_id) if suggestion_id else None,
+        }
 
-#     if model_id:
-#         event["modelName"] = model_id
-#     send_segment_event(event, event_name, user)
-
-
-# def trim_whitespace_lines(input: str):
-#     return "\n".join(line if line.strip() else "" for line in input.split("\n"))
+    if model_id:
+        event["modelName"] = model_id
+    send_segment_event(event, event_name, user)
 
 
-# def truncate_recommendation_yaml(recommendation_yaml: str) -> tuple[bool, str]:
-#     lines = recommendation_yaml.splitlines()
-#     lines = [line for line in lines if line.strip() != ""]
+def trim_whitespace_lines(input: str):
+    return "\n".join(line if line.strip() else "" for line in input.split("\n"))
 
-#     # process the input only when it has multiple lines
-#     if len(lines) < 2:
-#         return False, recommendation_yaml
 
-#     # if the last line can be parsed as YAML successfully,
-#     # we do not need to try truncating.
-#     last_line = lines[-1]
-#     is_last_line_valid = False
-#     try:
-#         _ = yaml.safe_load(last_line)
-#         is_last_line_valid = True
-#     except Exception:
-#         pass
-#     if is_last_line_valid:
-#         return False, recommendation_yaml
+def truncate_recommendation_yaml(recommendation_yaml: str) -> tuple[bool, str]:
+    lines = recommendation_yaml.splitlines()
+    lines = [line for line in lines if line.strip() != ""]
 
-#     truncated_yaml = "\n".join(lines[:-1])
-#     return True, truncated_yaml
+    # process the input only when it has multiple lines
+    if len(lines) < 2:
+        return False, recommendation_yaml
+
+    # if the last line can be parsed as YAML successfully,
+    # we do not need to try truncating.
+    last_line = lines[-1]
+    is_last_line_valid = False
+    try:
+        _ = yaml.safe_load(last_line)
+        is_last_line_valid = True
+    except Exception:
+        pass
+    if is_last_line_valid:
+        return False, recommendation_yaml
+
+    truncated_yaml = "\n".join(lines[:-1])
+    return True, truncated_yaml
 
 
 def completion_post_process(context: CompletionContext):
@@ -368,25 +368,23 @@ def completion_post_process(context: CompletionContext):
         context.predictions["predictions"] = [context.predictions["predictions"][0].split("\nASSISTANT:")[0].strip()]
     if "###\n" in context.predictions["predictions"][0]:
         context.predictions["predictions"] = [context.predictions["predictions"][0].split("###\n")[0].strip()]
-    context.task_results = context.predictions
-    print("context.predictions")
-    print(context.predictions)
+    # context.task_results = tasks
+    # context.post_processed_predictions = post_processed_predictions
+    context.task_results = None
     context.post_processed_predictions = context.predictions
-    print("post_processed_predictions")
-    print(post_processed_predictions)
 
 
-# def populate_module_and_collection(fqcn_module, task):
-#     if fqcn_module is None or fqcn_module == "":
-#         # In case the module is not part of the collections, ARI does not handle it.
-#         # This way, parsing the module from the prediction instead.
-#         fqcn_module = fmtr.get_fqcn_or_module_from_prediction(task["prediction"])
+def populate_module_and_collection(fqcn_module, task):
+    if fqcn_module is None or fqcn_module == "":
+        # In case the module is not part of the collections, ARI does not handle it.
+        # This way, parsing the module from the prediction instead.
+        fqcn_module = fmtr.get_fqcn_or_module_from_prediction(task["prediction"])
 
-#     if fqcn_module is not None:
-#         task["module"] = fqcn_module
-#         index = fqcn_module.rfind(".")
-#         if index != -1:
-#             task["collection"] = fqcn_module[:index]
+    if fqcn_module is not None:
+        task["module"] = fqcn_module
+        index = fqcn_module.rfind(".")
+        if index != -1:
+            task["collection"] = fqcn_module[:index]
 
 
 class PostProcessStage(PipelineElement):
