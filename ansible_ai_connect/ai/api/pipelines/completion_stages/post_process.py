@@ -134,6 +134,7 @@ def completion_post_process(context: CompletionContext):
     post_processed_predictions = context.anonymized_predictions.copy()
     is_multi_task_prompt = fmtr.is_multi_task_prompt(original_prompt)
 
+    # NOTE: Disabled ARI for Rulebook gen poc
     # ari_caller = apps.get_app_config("ai").get_ari_caller()
     # if not ari_caller:
     #     logger.warning("skipped ari post processing because ari was not initialized")

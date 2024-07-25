@@ -155,6 +155,7 @@ class CompletionRequestSerializer(Metadata):
         data = super().validate(data)
 
         data["prompt"], data["context"] = fmtr.extract_prompt_and_context(data["prompt"])
+        # NOTE: Disabled validation for Rulebook gen poc
         # CompletionRequestSerializer.validate_extracted_prompt(
         #     data["prompt"], self.context.get("request").user
         # )
