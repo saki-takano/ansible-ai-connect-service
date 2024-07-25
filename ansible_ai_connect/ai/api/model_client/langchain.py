@@ -97,6 +97,7 @@ class LangChainClient(ModelMeshClient):
         context = model_input.get("instances", [{}])[0].get("context", "")
 
         # NOTE: The change below is just for rulebook PoC, need to update or remove it later
+        print(prompt)
         full_prompt = f"Question:\n{prompt}\nAnswer:\n"
         # full_prompt = f"{context}{prompt}\n"
         
@@ -116,7 +117,8 @@ class LangChainClient(ModelMeshClient):
         try:
             chain = chat_template | llm
             message = chain.invoke({"prompt": full_prompt})
-            response = {"predictions": [unwrap_task_answer(message)], "model_id": model_id}
+            # response = {"predictions": [unwrap_task_answer(message)], "model_id": model_id}
+            response = {"predictions": [message], "model_id": model_id}
 
             return response
 

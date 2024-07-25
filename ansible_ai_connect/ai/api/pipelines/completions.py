@@ -44,7 +44,8 @@ class CompletionsPipeline(Pipeline[Response, CompletionContext]):
         super().__init__(
             [
                 DeserializeStage(),
-                PreProcessStage(),
+                # NOTE: The change below is just for rulebook PoC, need to update or remove it later
+                # PreProcessStage(),
                 InferenceStage(),
                 PostProcessStage(),
                 ResponseStage(),

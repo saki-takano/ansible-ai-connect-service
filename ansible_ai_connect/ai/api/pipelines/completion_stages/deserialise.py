@@ -32,9 +32,11 @@ class DeserializeStage(PipelineElement):
         request = context.request
         request._request._suggestion_id = request.data.get("suggestionId")
 
+        print({request.data["prompt"]})
         request_serializer = CompletionRequestSerializer(
             data=request.data, context={"request": request}
         )
+        print(request_serializer)
 
         try:
             request_serializer.is_valid(raise_exception=True)
@@ -64,4 +66,7 @@ class DeserializeStage(PipelineElement):
         payload = APIPayload(**request_serializer.validated_data)
         payload.original_prompt = request.data.get("prompt", "")
 
+        # NOTE: The change below is just for rulebook PoC, need to update or remove it later
+        # payload.prompt = request.data
+        # payload.context = ""
         context.payload = payload

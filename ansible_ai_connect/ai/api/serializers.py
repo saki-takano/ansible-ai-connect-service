@@ -111,39 +111,39 @@ class CompletionRequestSerializer(Metadata):
     model = serializers.CharField(required=False, allow_blank=True)
 
     @staticmethod
-    def validate_extracted_prompt(prompt, user):
-        if fmtr.is_multi_task_prompt(prompt):
-            # Multi-task is commercial-only
-            if user.rh_user_has_seat is False:
-                raise serializers.ValidationError(
-                    {"prompt": "requested prompt format is not supported"}
-                )
+    # def validate_extracted_prompt(prompt, user):
+        # if fmtr.is_multi_task_prompt(prompt):
+        #     # Multi-task is commercial-only
+        #     if user.rh_user_has_seat is False:
+        #         raise serializers.ValidationError(
+        #             {"prompt": "requested prompt format is not supported"}
+        #         )
 
-            if "&&" in prompt:
-                raise serializers.ValidationError(
-                    {"prompt": "multiple task requests should be separated by a single '&'"}
-                )
+        #     if "&&" in prompt:
+        #         raise serializers.ValidationError(
+        #             {"prompt": "multiple task requests should be separated by a single '&'"}
+        #         )
 
-            task_count = fmtr.get_task_count_from_prompt(prompt)
-            if task_count > int(settings.MULTI_TASK_MAX_REQUESTS):
-                raise serializers.ValidationError({"prompt": "maximum task request size exceeded"})
-        else:
-            # Confirm the prompt contains some flavor of '- name:'
-            prompt_list = yaml.load(prompt, Loader=yaml.SafeLoader)
-            if (
-                not isinstance(prompt_list, list)
-                or len(prompt_list) != 1
-                or not isinstance(prompt_list[0], dict)
-                or len(prompt_list[0]) != 1
-                or "name" not in prompt_list[0]
-            ):
-                raise serializers.ValidationError(
-                    {"prompt": "prompt does not contain the name parameter"}
-                )
-            if isinstance(prompt_list[0]["name"], list):
-                raise serializers.ValidationError({"prompt": "prompt contains a list"})
-            if isinstance(prompt_list[0]["name"], dict):
-                raise serializers.ValidationError({"prompt": "prompt contains a dictionary"})
+        #     task_count = fmtr.get_task_count_from_prompt(prompt)
+        #     if task_count > int(settings.MULTI_TASK_MAX_REQUESTS):
+        #         raise serializers.ValidationError({"prompt": "maximum task request size exceeded"})
+        # else:
+        #     # Confirm the prompt contains some flavor of '- name:'
+        #     prompt_list = yaml.load(prompt, Loader=yaml.SafeLoader)
+        #     if (
+        #         not isinstance(prompt_list, list)
+        #         or len(prompt_list) != 1
+        #         or not isinstance(prompt_list[0], dict)
+        #         or len(prompt_list[0]) != 1
+        #         or "name" not in prompt_list[0]
+        #     ):
+        #         raise serializers.ValidationError(
+        #             {"prompt": "prompt does not contain the name parameter"}
+        #         )
+        #     if isinstance(prompt_list[0]["name"], list):
+        #         raise serializers.ValidationError({"prompt": "prompt contains a list"})
+        #     if isinstance(prompt_list[0]["name"], dict):
+        #         raise serializers.ValidationError({"prompt": "prompt contains a dictionary"})
 
     def validate_model(self, value):
         user = self.context.get("request").user
@@ -155,9 +155,9 @@ class CompletionRequestSerializer(Metadata):
         data = super().validate(data)
 
         data["prompt"], data["context"] = fmtr.extract_prompt_and_context(data["prompt"])
-        CompletionRequestSerializer.validate_extracted_prompt(
-            data["prompt"], self.context.get("request").user
-        )
+        # CompletionRequestSerializer.validate_extracted_prompt(
+        #     data["prompt"], self.context.get("request").user
+        # )
 
         # If suggestion ID was not included in the request, set a random UUID to it.
         if data.get("suggestionId") is None:
