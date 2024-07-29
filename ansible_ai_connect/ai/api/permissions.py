@@ -143,6 +143,8 @@ class BlockUserWithoutSeat(permissions.BasePermission):
     message = "User doesn't have access to the IBM watsonx Code Assistant."
 
     def has_permission(self, request, view):
+        print("[DEBUG] BlockUserWithoutSeat.has_permission()")
+        return CONTINUE
         user = request.user
         if settings.ANSIBLE_AI_ENABLE_TECH_PREVIEW:
             return CONTINUE

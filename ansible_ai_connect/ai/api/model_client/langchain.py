@@ -179,7 +179,11 @@ class LangChainClient(ModelMeshClient):
         )
 
         chain = chat_template | llm
+        # NOTE: for rulebook PoC
+        text = f"Question:\n{text}\nAnswer:\n"
+        print(f"[DEBUG] right before generate_playbook() invoke() text: {text}, outline: {outline}")
         output = chain.invoke({"text": text, "outline": outline})
+        print(f"[DEBUG] right after generate_playbook() invoke() output: {output}")
         playbook, outline = unwrap_playbook_answer(output)
 
         if not create_outline:
