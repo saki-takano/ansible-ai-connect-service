@@ -29,11 +29,12 @@ from langchain_core.prompts.chat import (
 from .base import ModelMeshClient
 from .exceptions import ModelTimeoutError
 
-SYSTEM_MESSAGE_TEMPLATE = (
-    "You are an Ansible expert. Return a single task that best completes the "
-    "partial playbook. Return only the task as YAML. Do not return multiple tasks. "
-    "Do not explain your response. Do not include the prompt in your response."
-)
+# SYSTEM_MESSAGE_TEMPLATE = (
+#     "You are an Ansible expert. Return a single task that best completes the "
+#     "partial playbook. Return only the task as YAML. Do not return multiple tasks. "
+#     "Do not explain your response. Do not include the prompt in your response."
+# )
+SYSTEM_MESSAGE_TEMPLATE = ""
 HUMAN_MESSAGE_TEMPLATE = "{prompt}"
 
 
