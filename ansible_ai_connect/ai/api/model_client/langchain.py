@@ -135,25 +135,25 @@ class LangChainClient(ModelMeshClient):
     ) -> tuple[str, str]:
         SYSTEM_MESSAGE_TEMPLATE = """
         You are an Ansible expert.
-        Your role is to help Ansible developers write playbooks.
-        You answer with an Ansible playbook.
+        Your role is to help Ansible developers write rulebooks.
+        You answer with an Ansible rulebook.
         """
 
         SYSTEM_MESSAGE_TEMPLATE_WITH_OUTLINE = """
         You are an Ansible expert.
-        Your role is to help Ansible developers write playbooks.
-        The first part of the answer is an Ansible playbook.
+        Your role is to help Ansible developers write rulebooks.
+        The first part of the answer is an Ansible rulebook.
         the second part is a step by step explanation of this.
         Use a new line to explain each step.
         """
 
         HUMAN_MESSAGE_TEMPLATE = """
-        This is what the playbook should do: {text}
+        This is what the rulebook should do: {text}
         """
 
         HUMAN_MESSAGE_TEMPLATE_WITH_OUTLINE = """
-        This is what the playbook should do: {text}
-        This is a break down of the expected Playbook: {outline}
+        This is what the rulebook should do: {text}
+        This is a break down of the expected Rulebook: {outline}
         """
 
         system_template = (
@@ -179,8 +179,8 @@ class LangChainClient(ModelMeshClient):
             ]
         )
 
-        chain = chat_template | llm
         # NOTE: for rulebook PoC
+        chain = chat_template | llm
         text = f"Question:\n{text}\nAnswer:\n"
         print(f"[DEBUG] right before generate_playbook() invoke() text: {text}, outline: {outline}")
         output = chain.invoke({"text": text, "outline": outline})

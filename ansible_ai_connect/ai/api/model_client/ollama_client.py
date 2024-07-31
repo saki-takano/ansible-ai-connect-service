@@ -28,6 +28,6 @@ class OllamaClient(LangChainClient):
         return Ollama(
             base_url=self._inference_url,
             model=model_id,
-            stop=["Question:", "Human:"],
+            stop=["Question:", "Human:", "Answer ", "Question "],
             num_predict=1024,
         )
