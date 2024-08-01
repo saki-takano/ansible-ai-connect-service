@@ -37,3 +37,4 @@ class CompletionContext:
     post_processed_predictions: dict[str, Union[list[str], str]] = field(default_factory=dict)
 
     task_results: list[dict[str, str]] = field(default_factory=list)
+    evaluation: dict[str, Any] = field(default_factory=dict)
