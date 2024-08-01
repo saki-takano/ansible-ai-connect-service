@@ -39,10 +39,12 @@ class ResponseStage(PipelineElement):
         payload = context.payload
         predictions = context.predictions
         post_processed_predictions = context.post_processed_predictions
+        eval_result = context.evaluation
         tasks_results = context.task_results
         try:
             response_data = {
                 "predictions": post_processed_predictions["predictions"],
+                "evaluation": eval_result,
                 "suggestionId": payload.suggestionId,
             }
             if model_from_prediction := predictions.get("model_id"):

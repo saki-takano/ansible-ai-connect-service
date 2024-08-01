@@ -73,6 +73,11 @@ COPY tools/configs/supervisord.conf /etc/supervisor/supervisord.conf
 COPY tools/scripts/install-ari-rule-requirements.sh /usr/bin/install-ari-rule-requirements.sh
 COPY ari /etc/ari
 
+# Setting for Eval and PostProcess
+ARG GITHUB_TOKEN
+RUN git clone https://${GITHUB_TOKEN}:x-oauth-basic@github.ibm.com/project-polaris/rulebook-eval.git /tmp/rulebook-eval
+RUN pip install -e /tmp/rulebook-eval
+
 # Set permissions
 RUN for dir in \
       /var/log/supervisor \

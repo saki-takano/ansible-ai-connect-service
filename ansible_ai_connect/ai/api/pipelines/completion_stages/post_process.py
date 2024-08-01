@@ -15,6 +15,8 @@
 import json
 import logging
 import time
+import os
+import requests
 
 import yaml
 from django.apps import apps
@@ -31,6 +33,15 @@ from ansible_ai_connect.ai.api.pipelines.common import PipelineElement
 from ansible_ai_connect.ai.api.pipelines.completion_context import CompletionContext
 from ansible_ai_connect.ai.api.utils.segment import send_segment_event
 
+from rulebook_eval.eval import QualityValidator
+from rulebook_eval.postprocess import PostProcessor
+from rulebook_eval.object_loader import RulebookLoader
+
+
+qv = QualityValidator()
+pp = PostProcessor()
+rbl = RulebookLoader()
+
 logger = logging.getLogger(__name__)
 
 STRIP_YAML_LINE = "---\n"
@@ -41,6 +52,8 @@ postprocess_hist = Histogram(
     namespace=NAMESPACE,
 )
 
+ENABLE_ADVANCE_EVAL = os.getenv("ENABLE_ADVANCE_EVAL", "False").lower() == "true"
+ADV_EVAL_API = os.getenv("ADV_EVAL_API")
 
 def get_ansible_lint_caller():
     ansible_lint_caller = apps.get_app_config("ai").get_ansible_lint_caller()
@@ -372,7 +385,60 @@ def completion_post_process(context: CompletionContext):
     # context.task_results = tasks
     # context.post_processed_predictions = post_processed_predictions
     context.task_results = None
-    context.post_processed_predictions = context.predictions
+    
+    try:
+        # postprocess
+        rulesets_obj = rbl.load_rulesets_from_yaml(context.predictions["predictions"][0])
+        pp_yamls, pp_detail = pp.postprocess_rulesets(rulesets_obj)
+        print("[DEBUG]PostProcess Result\n")
+        print(pp_yamls[0])
+        print(json.dumps(pp_detail, indent=4))
+        # evaluation
+        use_adv_eval = True if ENABLE_ADVANCE_EVAL and ADV_EVAL_API else False
+        if use_adv_eval:
+            try:
+                print("[DEBUG]use advance evaluation")
+                print(pp_yamls[0], type(pp_yamls[0]))
+                payload = {"prompt": prompt, "prediction": pp_yamls[0]}
+                response = requests.post(ADV_EVAL_API, data=json.dumps(payload), headers={'Content-Type': 'application/json'})
+                if response.status_code == 200:
+                    print("[DEBUG] Advance eval result:", response.json(), type(response.json()))
+                    context.evaluation = response.json()
+                else:
+                    logger.exception(f"failed api call to advance eval server {ADV_EVAL_API}", response.status_code)
+            except Exception as exc:
+                exception = exc
+                logger.exception(f"failed api call to advance eval server {ADV_EVAL_API}", exception)
+        if not use_adv_eval or not context.evaluation:
+            context.evaluation = qv.evaluate(pp_yamls[0])
+        print("[DEBUG]Eval Result\n", json.dumps(context.evaluation, indent=4))
+        if context.evaluation:
+            confidence_score = context.evaluation.get("score")
+                
+            syntax_check_conditions = [
+                context.evaluation.get("yaml_parse_ok"),
+                context.evaluation.get("parse_ok"),
+                not context.evaluation.get("non_exist_action"),
+                not context.evaluation.get("wrong_action_args"),
+                not context.evaluation.get("non_exist_sources"),
+                not context.evaluation.get("wrong_source_args")
+            ]
+            syntax_check = all(syntax_check_conditions)
+            rulesets_obj = rbl.load_rulesets_from_yaml(pp_yamls[0])
+            rulesets_obj[0].comment = f"confidence score: {confidence_score}, syntax check: {syntax_check}"
+            pp_yamls[0] = rulesets_obj[0].to_yaml_with_comment()
+        context.post_processed_predictions["predictions"] = pp_yamls
+        context.evaluation["post_process_detail"] = pp_detail
+        print("[DEBUG]Commented Yaml\n")
+        print(pp_yamls[0])
+    except Exception as exc:
+        exception = exc
+        # return the original recommendation if we failed to postprocess
+        logger.exception(
+            f"failed to postprocess recommendation with prompt {prompt} "
+            f'model recommendation {context.predictions["predictions"]}'
+        )
+        context.post_processed_predictions["predictions"] = context.predictions["predictions"]
 
 
 def populate_module_and_collection(fqcn_module, task):
