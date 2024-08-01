@@ -185,8 +185,10 @@ class LangChainClient(ModelMeshClient):
         print(f"[DEBUG] right before generate_playbook() invoke() text: {text}, outline: {outline}")
         output = chain.invoke({"text": text, "outline": outline})
         print(f"[DEBUG] right after generate_playbook() invoke() output: {output}")
-        playbook, outline = unwrap_playbook_answer(output)
-
+        playbook = output
+        outline = ""
+        # playbook, outline = unwrap_playbook_answer(output)
+        print(f"[DEBUG] right after unwrap_playbook_answer() playbook: {playbook}")
         if not create_outline:
             outline = ""
 

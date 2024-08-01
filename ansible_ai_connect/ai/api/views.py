@@ -829,6 +829,7 @@ class Generation(APIView):
             playbook, outline = llm.generate_playbook(
                 request, text, create_outline, outline, generation_id
             )
+            print("[DEBUG] llm.generate_playbook result:", playbook)
             duration = round((time.time() - start_time) * 1000, 2)
 
             # Anonymize responses
@@ -846,6 +847,7 @@ class Generation(APIView):
                 "format": "plaintext",
                 "generationId": generation_id,
             }
+            print("[DEBUG] answer:", answer)
 
         except WcaBadRequest as e:
             exception = e
