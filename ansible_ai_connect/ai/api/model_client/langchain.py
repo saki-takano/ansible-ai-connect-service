@@ -29,6 +29,12 @@ from langchain_core.prompts.chat import (
 from .base import ModelMeshClient
 from .exceptions import ModelTimeoutError
 
+from rulebook_eval.eval import QualityValidator
+from rulebook_eval.postprocess import PostProcessor
+from rulebook_eval.object_loader import RulebookLoader
+import os
+import json
+
 # SYSTEM_MESSAGE_TEMPLATE = (
 #     "You are an Ansible expert. Return a single task that best completes the "
 #     "partial playbook. Return only the task as YAML. Do not return multiple tasks. "
@@ -36,6 +42,14 @@ from .exceptions import ModelTimeoutError
 # )
 SYSTEM_MESSAGE_TEMPLATE = ""
 HUMAN_MESSAGE_TEMPLATE = "{prompt}"
+
+
+ENABLE_ADVANCE_EVAL = os.getenv("ENABLE_ADVANCE_EVAL", "False").lower() == "true"
+ADV_EVAL_API = os.getenv("ADV_EVAL_API")
+
+qv = QualityValidator()
+pp = PostProcessor()
+rbl = RulebookLoader()
 
 
 def unwrap_playbook_answer(message: str | BaseMessage) -> tuple[str, str]:
@@ -181,6 +195,7 @@ class LangChainClient(ModelMeshClient):
 
         # NOTE: for rulebook PoC
         chain = chat_template | llm
+        org_prompt = text
         text = f"Question:\n{text}\nAnswer:\n"
         print(f"[DEBUG] right before generate_playbook() invoke() text: {text}, outline: {outline}")
         output = chain.invoke({"text": text, "outline": outline})
@@ -191,6 +206,16 @@ class LangChainClient(ModelMeshClient):
         print(f"[DEBUG] right after unwrap_playbook_answer() playbook: {playbook}")
         if not create_outline:
             outline = ""
+        
+        # Postprocess and Eval
+        playbook, pp_detail = post_process(prediction=playbook)
+        print(f"[DEBUG] post-processed yaml  output: {playbook}")
+        print("[DEBUG] post-process detail:", pp_detail)
+        use_adv_eval = True if ENABLE_ADVANCE_EVAL and ADV_EVAL_API else False
+        eval_res = evaluation(prompt=org_prompt, prediction=playbook, use_adv_eval=use_adv_eval)   
+        print("[DEBUG] evaluation:", eval_res)     
+        playbook = add_comment(eval_res=eval_res, prediction=playbook)
+        print(f"[DEBUG] commented yaml  output: {playbook}")
 
         return playbook, outline
 
@@ -229,3 +254,60 @@ class LangChainClient(ModelMeshClient):
         chain = chat_template | llm
         explanation = chain.invoke({"playbook": content})
         return explanation
+
+
+def post_process(prediction):
+    try:
+        rulesets_obj = rbl.load_rulesets_from_yaml(prediction)
+        pp_yamls, pp_detail = pp.postprocess_rulesets(rulesets_obj)
+        return pp_yamls[0], pp_detail
+    except Exception as exc:
+            print("[WARNING] postprocess error", exc)
+    return prediction, []
+
+
+def evaluation(prompt, prediction, use_adv_eval=False):
+    eval_res = {}
+    if use_adv_eval:
+        try:
+            print("[DEBUG]use advance evaluation")
+            payload = {"prompt": prompt, "prediction": prediction}
+            response = requests.post(ADV_EVAL_API, data=json.dumps(payload), headers={'Content-Type': 'application/json'})
+            if response.status_code == 200:
+                print("[DEBUG] Advance eval result:", response.json(), type(response.json()))
+                eval_res = response.json()
+            else:
+                print(f"[WARNING]failed api call to advance eval server {ADV_EVAL_API}", response.status_code)
+        except Exception as exc:
+            exception = exc
+            print(f"[WARNING]failed api call to advance eval server {ADV_EVAL_API}", exception)
+    if not use_adv_eval or not eval_res:
+        eval_res = qv.evaluate(prediction)
+    return eval_res
+
+
+def add_comment(eval_res, prediction):
+    confidence_score = eval_res.get("score")
+    syntax_check_conditions = [
+        eval_res.get("yaml_parse_ok"),
+        eval_res.get("parse_ok"),
+        not eval_res.get("non_exist_action"),
+        not eval_res.get("wrong_action_args"),
+        not eval_res.get("non_exist_sources"),
+        not eval_res.get("wrong_source_args")
+    ]
+    syntax_check = all(syntax_check_conditions)
+    comment = f"confidence score: {confidence_score}, syntax check: {syntax_check}"
+    try:
+        rulesets_obj = rbl.load_rulesets_from_yaml(prediction)
+        rulesets_obj[0].comment = comment
+        prediction = rulesets_obj[0].to_yaml_with_comment()
+    except Exception as exc:
+        print("[WARNING] load post-processed prediction as rulebook object", exc)
+        lines = prediction.split('\n')
+        for i, line in enumerate(lines):
+            if 'name:' in line:
+                lines.insert(i, f"# {comment}")
+                break
+        prediction = "\n".join(lines)
+    return prediction
