@@ -842,12 +842,12 @@ class Generation(APIView):
             )
 
             answer = {
-                "playbook": anonymized_playbook,
+                "playbook": playbook,
                 "outline": anonymized_outline,
                 "format": "plaintext",
                 "generationId": generation_id,
             }
-            print("[DEBUG] answer:", answer)
+            print("[DEBUG] answer:", playbook)
 
         except WcaBadRequest as e:
             exception = e
