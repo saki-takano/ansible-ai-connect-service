@@ -196,7 +196,7 @@ class LangChainClient(ModelMeshClient):
         # NOTE: for rulebook PoC
         chain = chat_template | llm
         org_prompt = text
-        text = f"Question:\n{text}\nAnswer:\n```yaml"
+        text = f"Question:\n{text}\nAnswer:\n"
         print(f"[DEBUG] right before generate_playbook() invoke() text: {text}, outline: {outline}")
         output = chain.invoke({"text": text, "outline": outline})
         print(f"[DEBUG] right after generate_playbook() invoke() output: {output}")
@@ -257,10 +257,6 @@ class LangChainClient(ModelMeshClient):
 
 
 def post_process(prediction):
-    separators = ["\n\n\n", "\nASSISTANT:", "###\n", "```"]
-    for separator in separators:
-        if separator in prediction:
-            prediction = prediction.split(separator)[0].strip()
     try:
         rulesets_obj = rbl.load_rulesets_from_yaml(prediction)
         pp_yamls, pp_detail = pp.postprocess_rulesets(rulesets_obj)
@@ -301,7 +297,7 @@ def add_comment(eval_res, prediction):
         not eval_res.get("wrong_source_args")
     ]
     syntax_check = all(syntax_check_conditions)
-    comment = f"confidence score: {confidence_score}, syntax check: {syntax_check}"
+    comment = f"Assisted by Polaris Policy Generator\nBase Model: ibm-granite/granite-8b-code-base\n\nconfidence score: {confidence_score}, syntax check: {syntax_check}"
     try:
         rulesets_obj = rbl.load_rulesets_from_yaml(prediction)
         rulesets_obj[0].comment = comment
